@@ -36,14 +36,14 @@ int main(int argc, char *argv[]) {
 
   printEven(n);
   
-  // for (int i = 0; i < 30; i++) {
-  //   if (stop) break;
-  //   sleep(1);
-  // }
-
-  while (!stop) {
-    pause();
+  for (int i = 0; i < 30; i++) {
+    if (stop) break;
+    sleep(1);
   }
+
+  // while (!stop) {
+  //   pause();
+  // }
 
   return 0;
 }
