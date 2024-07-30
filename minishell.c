@@ -25,7 +25,7 @@ char            line[NL];	/* command input buffer */
 	shell prompt
  */
 
-prompt(void)
+void prompt(void)
 {
   fprintf(stdout, "\n msh> ");
   fflush(stdout);
@@ -33,7 +33,7 @@ prompt(void)
 }
 
 
-main(int argk, char *argv[], char *envp[])
+int main(int argk, char *argv[], char *envp[])
 /* argk - number of arguments */
 /* argv - argument vector from command line */
 /* envp - environment pointer */
@@ -45,6 +45,7 @@ main(int argk, char *argv[], char *envp[])
   char           *sep = " \t\n";/* command line token separators    */
   int             i;		/* parse index */
 
+  int             bg;   /* background flag */
 
   /* prompt for and process one command line at a time  */
 
@@ -61,6 +62,13 @@ main(int argk, char *argv[], char *envp[])
     }
     if (line[0] == '#' || line[0] == '\n' || line[0] == '\000')
       continue;			/* to prompt */
+    
+    bg = 0;
+    if (line[strlen(line) - 2] == '&') {
+      bg = 1;
+      line[strlen(line) - 2] = '\0';
+    }
+
 
     v[0] = strtok(line, sep);
     for (i = 1; i < NV; i++) {
@@ -71,6 +79,17 @@ main(int argk, char *argv[], char *envp[])
     /* assert i is number of tokens + 1 */
 
     /* fork a child process to exec the command in v[0] */
+
+    if (strcmp(v[0], "cd") == 0) {
+      if (v[1] == NULL) {
+        fprintf(stderr, "cd: expected argument\n");
+      } else {
+        if (chdir(v[1]) != 0) {
+          perror("chdir");
+        }
+      }
+      continue;
+    }
 
     switch (frkRtnVal = fork()) {
     case -1:			/* fork returns error to parent process */
@@ -83,11 +102,23 @@ main(int argk, char *argv[], char *envp[])
 	
       }
     default:			/* code executed only by parent process */
-      {
-	wpid = wait(0);
-	printf("%s done \n", v[0]);
-	break;
+      if (bg) {
+        printf("%s [%d] started in background\n", v[0], frkRtnVal);
+      } else {
+        wpid = wait(0);
+        if (wpid == -1) {
+          perror("wait");
+        } else {
+          printf("%s done [%d]\n", v[0], wpid);
+        }
       }
+      break;
+  //     {
+	// wpid = wait(0);
+	// printf("%s done \n", v[0]);
+	// break;
+  //     }
     }				/* switch */
   }				/* while */
+  return 0;
 }				/* main */
