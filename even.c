@@ -3,6 +3,8 @@
 #include <signal.h>
 #include <stdlib.h>
 
+volatile sig_atomic_t stop = 0;
+
 void printEven(int n) {
   for (int i = 0; i <= n; i++) {
     if (i % 2 == 0) {
@@ -18,9 +20,15 @@ void handleSighup(int sig) {
 
 void handleSigint(int sig) {
   printf("Yeah!\n");
+  stop = 1;
 }
 
 int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    fprintf(stderr, "Usage: %s <number>\n", argv[0]);
+    return 1;
+  }
+
   int n = atoi(argv[1]);
 
   signal(SIGHUP, handleSighup);
@@ -28,7 +36,12 @@ int main(int argc, char *argv[]) {
 
   printEven(n);
   
-  while (1) {
+  // for (int i = 0; i < 30; i++) {
+  //   if (stop) break;
+  //   sleep(1);
+  // }
+
+  while (!stop) {
     pause();
   }
 
