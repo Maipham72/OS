@@ -28,9 +28,9 @@ int main(int argc, char *argv[]) {
 
   printEven(n);
   
-  // while (1) {
-  //   pause();
-  // }
+  while (1) {
+    pause();
+  }
 
   return 0;
 }
