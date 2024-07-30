@@ -8,73 +8,78 @@
 
 ********************************************************************/
 
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <stdio.h>
-#include <string.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
 
-#define NV 20			/* max number of command tokens */
-#define NL 100			/* input buffer size */
-char            line[NL];	/* command input buffer */
+#define NV 20  /* max number of command tokens */
+#define NL 100 /* input buffer size */
+char line[NL]; /* command input buffer */
 
+/*  shell prompt
+*/
 
-/*
-	shell prompt
- */
-
-void prompt(void)
-{
+void prompt(void) {
   fprintf(stdout, "\n msh> ");
   fflush(stdout);
-
 }
 
-
+void handleSigchld (int sig) {
+  int status;
+  pid_t pid;
+  while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+    if (WIFEXITED(status)) {
+      printf("[%d] exited with status %d\n", pid, WEXITSTATUS(status));
+    } else if (WIFSIGNALED(status)) {
+      printf("[%d] terminated by signal %d\n", pid, WEXITSTATUS(status));
+    }
+  }
+}
+ 
 int main(int argk, char *argv[], char *envp[])
 /* argk - number of arguments */
 /* argv - argument vector from command line */
 /* envp - environment pointer */
 
 {
-  int             frkRtnVal;	/* value returned by fork sys call */
-  int             wpid;		/* value returned by wait */
-  char           *v[NV];	/* array of pointers to command line tokens */
-  char           *sep = " \t\n";/* command line token separators    */
-  int             i;		/* parse index */
+  int frkRtnVal;       /* value returned by fork sys call */
+  int wpid;            /* value returned by wait */
+  char *v[NV];         /* array of pointers to command line tokens */
+  char *sep = " \t\n"; /* command line token separators    */
+  int i;               /* parse index */
 
-  int             bg;   /* background flag */
+  int bg; /* background flag */
 
   /* prompt for and process one command line at a time  */
 
-  while (1) {			/* do Forever */
+  while (1) { /* do Forever */
     prompt();
     fgets(line, NL, stdin);
     fflush(stdin);
 
-    if (feof(stdin)) {		/* non-zero on EOF  */
+    if (feof(stdin)) { /* non-zero on EOF  */
 
-      fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(),
-	      feof(stdin), ferror(stdin));
+      fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(), feof(stdin),
+              ferror(stdin));
       exit(0);
     }
     if (line[0] == '#' || line[0] == '\n' || line[0] == '\000')
-      continue;			/* to prompt */
-    
+      continue; /* to prompt */
+
     bg = 0;
     if (line[strlen(line) - 2] == '&') {
       bg = 1;
       line[strlen(line) - 2] = '\0';
     }
 
-
     v[0] = strtok(line, sep);
     for (i = 1; i < NV; i++) {
       v[i] = strtok(NULL, sep);
-      if (v[i] == NULL)
-	break;
+      if (v[i] == NULL) break;
     }
     /* assert i is number of tokens + 1 */
 
@@ -82,7 +87,7 @@ int main(int argk, char *argv[], char *envp[])
 
     if (strcmp(v[0], "cd") == 0) {
       if (v[1] == NULL) {
-        fprintf(stderr, "cd: expected argument\n");
+        fprintf(stderr, "cd: worked\n");
       } else {
         if (chdir(v[1]) != 0) {
           perror("chdir");
@@ -92,33 +97,35 @@ int main(int argk, char *argv[], char *envp[])
     }
 
     switch (frkRtnVal = fork()) {
-    case -1:			/* fork returns error to parent process */
+      case -1: /* fork returns error to parent process */
       {
-	break;
+        perror("err");
+        break;
       }
-    case 0:			/* code executed only by child process */
+      case 0: /* code executed only by child process */
       {
-	execvp(v[0], v);
-	
+        execvp(v[0], v);
+        perror("execvp");
+        exit(EXIT_FAILURE);
       }
-    default:			/* code executed only by parent process */
-      if (bg) {
-        printf("%s [%d] started in background\n", v[0], frkRtnVal);
-      } else {
-        wpid = wait(0);
-        if (wpid == -1) {
-          perror("wait");
+      default: /* code executed only by parent process */
+        if (bg) {
+          printf("%s [%d] started in background\n", v[0], frkRtnVal);
         } else {
-          printf("%s done [%d]\n", v[0], wpid);
+          int status;
+          if (waitpid(frkRtnVal, &status, 0) == -1) {
+            perror("waitpid");
+          } else {
+            printf("%s done [%d]\n", v[0], frkRtnVal);
+          }
         }
-      }
-      break;
-  //     {
-	// wpid = wait(0);
-	// printf("%s done \n", v[0]);
-	// break;
-  //     }
-    }				/* switch */
-  }				/* while */
+        break;
+        //     {
+        // wpid = wait(0);
+        // printf("%s done \n", v[0]);
+        // break;
+        //     }
+    } /* switch */
+  } /* while */
   return 0;
-}				/* main */
+} /* main */

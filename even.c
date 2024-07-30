@@ -8,7 +8,6 @@ void handleSighup(int sig) {
     fflush(stdout);
 }
 
-// Signal handler for SIGINT
 void handleSigint(int sig) {
     printf("Yeah!\n");
     fflush(stdout);
