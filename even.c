@@ -1,45 +1,41 @@
 #include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
 #include <stdlib.h>
-
-// void printEven(int n) {
-//   for (int i = 0; i <= n; i++) {
-//     if (i % 2 == 0) {
-//       printf("%d\n", i);
-//       sleep(5);
-//     }
-//   }
-// }
+#include <signal.h>
+#include <unistd.h>
 
 void handleSighup(int sig) {
-  printf("Ouch!\n");
-  fflush(stdout);
+    printf("Ouch!\n");
+    fflush(stdout);
 }
 
+// Signal handler for SIGINT
 void handleSigint(int sig) {
-  printf("Yeah!\n");
-  fflush(stdout);
+    printf("Yeah!\n");
+    fflush(stdout);
 }
 
 int main(int argc, char *argv[]) {
-  int n = atoi(argv[1]);
-
-  signal(SIGHUP, handleSighup);
-  signal(SIGINT, handleSigint);
-
-  // printEven(n);
-
-  for (int i = 0; i <= n; i++) {
-    if (i % 2 == 0) {
-      printf("%d\n", i);
-      sleep(5);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <n>\n", argv[0]);
+        return 1;
     }
-  }
 
-  // while (!stop) {
-  //   pause();
-  // }
+    int n = atoi(argv[1]);
 
-  return 0;
+    if (signal(SIGHUP, handleSighup) == SIG_ERR) {
+        perror("Error setting signal handler for SIGHUP");
+        return 1;
+    }
+    if (signal(SIGINT, handleSigint) == SIG_ERR) {
+        perror("Error setting signal handler for SIGINT");
+        return 1;
+    }
+
+    for (int i = 0; i < n; i++) {
+        printf("%d\n", 2 * i);
+        fflush(stdout);
+        sleep(5);
+    }
+
+    return 0;
 }
