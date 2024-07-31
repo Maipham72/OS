@@ -35,7 +35,7 @@ int main(int argk, char *argv[], char *envp[])
 
 {
   int frkRtnVal;       /* value returned by fork sys call */
-  //int wpid;            /* value returned by wait */
+  int wpid;            /* value returned by wait */
   char *v[NV];         /* array of pointers to command line tokens */
   char *sep = " \t\n"; /* command line token separators    */
   int i;               /* parse index */
@@ -77,6 +77,13 @@ int main(int argk, char *argv[], char *envp[])
       if (v[1] == NULL) {
         fprintf(stderr, "cd: missing arg\n");
       } else {
+        size_t len = strlen(v[1]);
+        if (len > 0 && v[1][len - 1] == '\n') {
+          v[1][len - 1] = '\0';
+        }
+
+        printf("Changing directory to: %s\n", v[1]);
+        
         if (chdir(v[1]) != 0) {
           perror("chdir");
         }
@@ -102,17 +109,12 @@ int main(int argk, char *argv[], char *envp[])
       }
       default: /* code executed only by parent process */
         if (!bg) {
-          wait(0);
+          wpid = wait(0);
           printf("%s done\n", v[0]);
         } else {
           printf("%s started in bg\n", v[0]);
         }
         break;
-        //     {
-        // wpid = wait(0);
-        // printf("%s done \n", v[0]);
-        // break;
-        //     }
     } /* switch */
   } /* while */
   return 0;
