@@ -27,18 +27,6 @@ void prompt(void) {
   fprintf(stdout, "\n msh> ");
   fflush(stdout);
 }
-
-void handleSigchld (int sig) {
-  int status;
-  pid_t pid;
-  while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-    if (WIFEXITED(status)) {
-      printf("[%d] exited with status %d\n", pid, WEXITSTATUS(status));
-    } else if (WIFSIGNALED(status)) {
-      printf("[%d] terminated by signal %d\n", pid, WEXITSTATUS(status));
-    }
-  }
-}
  
 int main(int argk, char *argv[], char *envp[])
 /* argk - number of arguments */
@@ -87,7 +75,7 @@ int main(int argk, char *argv[], char *envp[])
 
     if (strcmp(v[0], "cd") == 0) {
       if (v[1] == NULL) {
-        fprintf(stderr, "cd: worked\n");
+        fprintf(stderr, "cd: missing arg\n");
       } else {
         if (chdir(v[1]) != 0) {
           perror("chdir");
@@ -99,25 +87,23 @@ int main(int argk, char *argv[], char *envp[])
     switch (frkRtnVal = fork()) {
       case -1: /* fork returns error to parent process */
       {
-        perror("err");
+        perror("fork");
         break;
       }
       case 0: /* code executed only by child process */
       {
-        execvp(v[0], v);
-        perror("execvp");
-        exit(EXIT_FAILURE);
+        if (execvp(v[0], v) == -1) {
+          perror("execvp");
+          exit(1);
+        }
+        break;
       }
       default: /* code executed only by parent process */
-        if (bg) {
-          printf("%s [%d] started in background\n", v[0], frkRtnVal);
+        if (!bg) {
+          wpid = wait(0);
+          printf("%s done\n", v[0]);
         } else {
-          int status;
-          if (waitpid(frkRtnVal, &status, 0) == -1) {
-            perror("waitpid");
-          } else {
-            printf("%s done [%d]\n", v[0], frkRtnVal);
-          }
+          printf("%s started in bg\n", v[0]);
         }
         break;
         //     {
