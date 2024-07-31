@@ -83,7 +83,7 @@ int main(int argk, char *argv[], char *envp[])
         }
 
         printf("Changing directory to: %s\n", v[1]);
-        
+
         if (chdir(v[1]) != 0) {
           perror("chdir");
         }
@@ -110,7 +110,7 @@ int main(int argk, char *argv[], char *envp[])
       default: /* code executed only by parent process */
         if (!bg) {
           wpid = wait(0);
-          printf("%s done\n", v[0]);
+          printf("%d done\n", wpid);
         } else {
           printf("%s started in bg\n", v[0]);
         }
