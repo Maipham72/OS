@@ -82,6 +82,8 @@ int main(int argk, char *argv[], char *envp[])
         }
       }
       continue;
+    } else if (strcmp(v[0], "exit") == 0) {
+      exit(0);
     }
 
     switch (frkRtnVal = fork()) {
