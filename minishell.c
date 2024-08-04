@@ -35,7 +35,7 @@ int main(int argk, char *argv[], char *envp[])
 
 {
   int frkRtnVal;       /* value returned by fork sys call */
-  int wpid;            /* value returned by wait */
+  // int wpid;            /* value returned by wait */
   char *v[NV];         /* array of pointers to command line tokens */
   char *sep = " \t\n"; /* command line token separators    */
   int i;               /* parse index */
