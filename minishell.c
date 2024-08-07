@@ -92,16 +92,16 @@ int main(int argk, char *argv[], char *envp[])
     }
 
     /* fork a child process to exec the command in v[0] */
-    for (int i = 0; i < bgCount; i++) {
+    for (int j = 0; j < bgCount; j++) {
       int status;
       pid_t result = waitpid(bgProcesses[i].pid, &status, WNOHANG);
       if (result != 0) {
-        printf("[%d]+ Done\t\t%s\n", bgProcesses[i].index,"command_name");
-        for (int j = i; j < bgCount - 1; j++) {
-          bgProcesses[j] = bgProcesses[j + 1];
+        printf("[%d]+ Done\t\t%s\n", bgProcesses[j].index,bgProcesses[j].command);
+        for (int k = j; k < bgCount - 1; k++) {
+          bgProcesses[k] = bgProcesses[k + 1];
         }
         bgCount--;
-        i--;
+        j--;
       }
     }
 
@@ -127,11 +127,10 @@ int main(int argk, char *argv[], char *envp[])
           // printf("%s done \n", v[0]);
         } else {
           bgProcesses[bgCount].pid = frkRtnVal;
-          bgProcesses[bgCount].index = jobNumber;
+          bgProcesses[bgCount].index = jobNumber++;
           snprintf(bgProcesses[bgCount].command, NL, "%s", v[0]);
-          printf("[%d] %d\n", jobNumber, frkRtnVal);
+          printf("[%d] %d\n", bgProcesses[bgCount].index, frkRtnVal);
           bgCount++;
-          jobNumber++;
         }
         break;
     } /* switch */
