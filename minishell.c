@@ -26,6 +26,7 @@ char line[NL]; /* command input buffer */
 typedef struct {
   int pid;
   int index;
+  char command[NL];
 } BackgroundProcess;
 
 void prompt(void) {
@@ -49,6 +50,7 @@ int main(int argk, char *argv[], char *envp[])
 
   BackgroundProcess bgProcesses[NV];
   int bgCount = 0;
+  int jobNumber = 1;
   /* prompt for and process one command line at a time  */
 
   while (1) { /* do Forever */
@@ -95,7 +97,9 @@ int main(int argk, char *argv[], char *envp[])
       pid_t result = waitpid(bgProcesses[i].pid, &status, WNOHANG);
       if (result != 0) {
         printf("[%d]+ Done\t\t%s\n", bgProcesses[i].index,"command_name");
-        bgProcesses[i] = bgProcesses[bgCount - 1];
+        for (int j = i; j < bgCount - 1; j++) {
+          bgProcesses[j] = bgProcesses[j + 1];
+        }
         bgCount--;
         i--;
       }
@@ -123,9 +127,11 @@ int main(int argk, char *argv[], char *envp[])
           // printf("%s done \n", v[0]);
         } else {
           bgProcesses[bgCount].pid = frkRtnVal;
-          bgProcesses[bgCount].index = bgCount + 1;
-          printf("[%d] %d\n", bgProcesses[bgCount].index, frkRtnVal);
+          bgProcesses[bgCount].index = jobNumber;
+          snprintf(bgProcesses[bgCount].command, NL, "%s", v[0]);
+          printf("[%d] %d\n", jobNumber, frkRtnVal);
           bgCount++;
+          jobNumber++;
         }
         break;
     } /* switch */
