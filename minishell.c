@@ -23,8 +23,13 @@ char line[NL]; /* command input buffer */
 /*  shell prompt
 */
 
+typedef struct {
+  int pid;
+  int index;
+} BackgroundProcess;
+
 void prompt(void) {
-  fprintf(stdout, "\n msh> ");
+  // fprintf(stdout, "\n msh> ");
   fflush(stdout);
 }
  
@@ -35,13 +40,15 @@ int main(int argk, char *argv[], char *envp[])
 
 {
   int frkRtnVal;       /* value returned by fork sys call */
-  // int wpid;            /* value returned by wait */
+  int wpid;            /* value returned by wait */
   char *v[NV];         /* array of pointers to command line tokens */
   char *sep = " \t\n"; /* command line token separators    */
   int i;               /* parse index */
 
   int bg; /* background flag */
 
+  BackgroundProcess bgProcesses[NV];
+  int bgCount = 0;
   /* prompt for and process one command line at a time  */
 
   while (1) { /* do Forever */
@@ -55,8 +62,8 @@ int main(int argk, char *argv[], char *envp[])
 
     if (feof(stdin)) { /* non-zero on EOF  */
 
-      fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(), feof(stdin),
-              ferror(stdin));
+      // fprintf(stderr, "EOF pid %d feof %d ferror %d\n", getpid(), feof(stdin),
+      //         ferror(stdin));
       exit(0);
     }
     if (line[0] == '#' || line[0] == '\n' || line[0] == '\000')
@@ -83,25 +90,16 @@ int main(int argk, char *argv[], char *envp[])
     }
 
     /* fork a child process to exec the command in v[0] */
-    // if (strcmp(v[0], "cd") == 0) {
-    //   if (v[1] == NULL) {
-    //     fprintf(stderr, "cd: missing arg\n");
-    //   } else {
-    //     size_t len = strlen(v[1]);
-    //     if (len > 0 && v[1][len - 1] == '\n') {
-    //       v[1][len - 1] = '\0';
-    //     }
-
-    //     printf("Changing directory to: %s\n", v[1]);
-
-    //     if (chdir(v[1]) != 0) {
-    //       perror("chdir");
-    //     }
-    //   }
-    //   continue;
-    // } else if (strcmp(v[0], "exit") == 0) {
-    //   exit(0);
-    // }
+    for (int i = 0; i < bgCount; i++) {
+      int status;
+      pid_t result = waitpid(bgProcesses[i].pid, &status, WNOHANG);
+      if (result != 0) {
+        printf("[%d]+ Done\t\t%s\n", bgProcesses[i].index,"command_name");
+        bgProcesses[i] = bgProcesses[bgCount - 1];
+        bgCount--;
+        i--;
+      }
+    }
 
     switch (frkRtnVal = fork()) {
       case -1: /* fork returns error to parent process */
@@ -122,9 +120,12 @@ int main(int argk, char *argv[], char *envp[])
           if (waitpid(frkRtnVal, NULL, 0) == -1) {
             perror("waitpid error");
           }
-          printf("%s done \n", v[0]);
+          // printf("%s done \n", v[0]);
         } else {
-          printf("Process %d running in background\n", frkRtnVal);
+          bgProcesses[bgCount].pid = frkRtnVal;
+          bgProcesses[bgCount].index = bgCount + 1;
+          printf("[%d] %d\n", bgProcesses[bgCount].index, frkRtnVal);
+          bgCount++;
         }
         break;
     } /* switch */
