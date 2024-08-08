@@ -29,7 +29,6 @@ typedef struct bg_process {
 } bg_process;
 
 bg_process *bg_processes = NULL;
-int bg_process_count = 0;
 int current_bg_number = 1;
 
 void prompt(void) {
@@ -47,42 +46,44 @@ void add_bg_process(pid_t pid, char *command) {
     bg_process *new_process = (bg_process *)malloc(sizeof(bg_process));
     new_process->number = current_bg_number++;
     new_process->pid = pid;
-    strncpy(new_process->command, command, NL);
+    snprintf(new_process->command, NL, "%s", command); // Store the command
     new_process->next = bg_processes;
     bg_processes = new_process;
     printf("[%d] %d\n", new_process->number, new_process->pid);
 }
 
-void remove_bg_process(pid_t pid) {
-    bg_process *prev = NULL, *curr = bg_processes;
+void print_done_messages() {
+    bg_process *prev = NULL, *curr = bg_processes, *tmp;
 
     while (curr != NULL) {
-        if (curr->pid == pid) {
+        int status;
+        pid_t result = waitpid(curr->pid, &status, WNOHANG);
+        if (result == 0) {
+            // Process has not finished
+            prev = curr;
+            curr = curr->next;
+        } else if (result == curr->pid) {
+            // Process has finished
+            printf("[%d]+ Done         %s\n", curr->number, curr->command);
             if (prev == NULL) {
                 bg_processes = curr->next;
             } else {
                 prev->next = curr->next;
             }
-            printf("[%d]+ Done %s\n", curr->number, curr->command);
-            free(curr);
-            return;
+            tmp = curr;
+            curr = curr->next;
+            free(tmp);
+        } else {
+            // waitpid error
+            perror("waitpid");
+            break;
         }
-        prev = curr;
-        curr = curr->next;
-    }
-}
-
-void handle_background_processes() {
-    int status;
-    pid_t pid;
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        remove_bg_process(pid);
     }
 }
 
 int main(int argc, char *argv[], char *envp[]) {
     int frkRtnVal;    /* value returned by fork sys call */
-    // int wpid;         /* value returned by wait */
+    int wpid;         /* value returned by wait */
     char *v[NV];      /* array of pointers to command line tokens */
     char *sep = " \t\n";/* command line token separators */
     int i;
@@ -109,6 +110,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
         if (strcmp(v[0], "cd") == 0) {
             handle_cd(v[1]);
+            print_done_messages();
             continue;
         }
 
@@ -131,7 +133,14 @@ int main(int argc, char *argv[], char *envp[]) {
 
         default:    /* parent process */
             if (is_background) {
-                add_bg_process(frkRtnVal, v[0]);
+                char command[NL] = "";
+                for (int j = 0; j < i - 1; j++) {
+                    strcat(command, v[j]);
+                    if (j < i - 2) {
+                        strcat(command, " ");
+                    }
+                }
+                add_bg_process(frkRtnVal, command);
             } else {
                 if (waitpid(frkRtnVal, NULL, 0) == -1) {
                     perror("waitpid");
@@ -140,6 +149,6 @@ int main(int argc, char *argv[], char *envp[]) {
             break;
         }
 
-        handle_background_processes();
+        print_done_messages();
     }
 }
