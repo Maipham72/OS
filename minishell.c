@@ -92,16 +92,18 @@ int main(int argk, char *argv[], char *envp[])
     }
 
     /* fork a child process to exec the command in v[0] */
-    for (int j = 0; j < bgCount; j++) {
+    for (int j = 0; j < bgCount;) {
       int status;
       pid_t result = waitpid(bgProcesses[i].pid, &status, WNOHANG);
       if (result != 0) {
         printf("[%d]+ Done\t\t%s\n", bgProcesses[j].index,bgProcesses[j].command);
-        for (int k = j; k < bgCount - 1; k++) {
-          bgProcesses[k] = bgProcesses[k + 1];
-        }
-        bgCount--;
-        j--;
+        // for (int k = j; k < bgCount - 1; k++) {
+        bgProcesses[j] = bgProcesses[--bgCount];
+        // }
+        // bgCount--;
+        // j--;
+      } else {
+        j++;
       }
     }
 
