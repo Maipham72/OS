@@ -21,7 +21,15 @@
 #define NL 100           /* input buffer size */
 char line[NL];   /* command input buffer */
 
+typedef struct bg_process {
+    int number;
+    pid_t pid;
+    struct bg_process *next;
+} bg_process;
+
+bg_process *bg_processes = NULL;
 int bg_process_count = 0;
+int current_bg_number = 1;
 
 void prompt(void) {
     // fprintf(stdout, "\n msh> ");
@@ -34,18 +42,45 @@ void handle_cd(char *path) {
     }
 }
 
+void add_bg_process(pid_t pid) {
+    bg_process *new_process = (bg_process *)malloc(sizeof(bg_process));
+    new_process->number = current_bg_number++;
+    new_process->pid = pid;
+    new_process->next = bg_processes;
+    bg_processes = new_process;
+    printf("[%d] %d\n", new_process->number, new_process->pid);
+}
+
+void remove_bg_process(pid_t pid) {
+    bg_process *prev = NULL, *curr = bg_processes;
+
+    while (curr != NULL) {
+        if (curr->pid == pid) {
+            if (prev == NULL) {
+                bg_processes = curr->next;
+            } else {
+                prev->next = curr->next;
+            }
+            printf("[%d]+ Done pid %d\n", curr->number, curr->pid);
+            free(curr);
+            return;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+}
+
 void handle_background_processes() {
     int status;
     pid_t pid;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        bg_process_count--;
-        printf("[%d]+ Done pid %d\n", bg_process_count + 1, pid);
+        remove_bg_process(pid);
     }
 }
 
 int main(int argc, char *argv[], char *envp[]) {
     int frkRtnVal;    /* value returned by fork sys call */
-    // int wpid;         /* value returned by wait */
+    int wpid;         /* value returned by wait */
     char *v[NV];      /* array of pointers to command line tokens */
     char *sep = " \t\n";/* command line token separators */
     int i;
@@ -94,8 +129,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
         default:    /* parent process */
             if (is_background) {
-                bg_process_count++;
-                printf("[%d] %d\n", bg_process_count, frkRtnVal);
+                add_bg_process(frkRtnVal);
             } else {
                 if (waitpid(frkRtnVal, NULL, 0) == -1) {
                     perror("waitpid");
