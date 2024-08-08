@@ -24,6 +24,7 @@ char line[NL];   /* command input buffer */
 typedef struct bg_process {
     int number;
     pid_t pid;
+    char command[NL];
     struct bg_process *next;
 } bg_process;
 
@@ -42,10 +43,11 @@ void handle_cd(char *path) {
     }
 }
 
-void add_bg_process(pid_t pid) {
+void add_bg_process(pid_t pid, char *command) {
     bg_process *new_process = (bg_process *)malloc(sizeof(bg_process));
     new_process->number = current_bg_number++;
     new_process->pid = pid;
+    strncpy(new_process->command, command, NL);
     new_process->next = bg_processes;
     bg_processes = new_process;
     printf("[%d] %d\n", new_process->number, new_process->pid);
@@ -61,7 +63,7 @@ void remove_bg_process(pid_t pid) {
             } else {
                 prev->next = curr->next;
             }
-            printf("[%d]+ Done pid %d\n", curr->number, curr->pid);
+            printf("[%d]+ Done %s\n", curr->number, curr->command);
             free(curr);
             return;
         }
@@ -129,7 +131,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
         default:    /* parent process */
             if (is_background) {
-                add_bg_process(frkRtnVal);
+                add_bg_process(frkRtnVal, v[0]);
             } else {
                 if (waitpid(frkRtnVal, NULL, 0) == -1) {
                     perror("waitpid");
