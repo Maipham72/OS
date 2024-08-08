@@ -64,7 +64,7 @@ void print_done_messages() {
             curr = curr->next;
         } else if (result == curr->pid) {
             // Process has finished
-            printf("[%d]+ Done         %s\n", curr->number, curr->command);
+            printf("[%d]+ Done               %s\n", curr->number, curr->command);
             if (prev == NULL) {
                 bg_processes = curr->next;
             } else {
