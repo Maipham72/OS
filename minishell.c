@@ -42,19 +42,21 @@ void prompt(void) {
   fflush(stdout);
 }
 
+// Cd handle
 void handleCd(char *path) {
   if (chdir(path) == -1) {
     perror("chdir");
   }
 }
 
+// background process
 void addBgProcess(pid_t pid, char *command[]) {
   bgProcess *newProcess = (bgProcess *)malloc(sizeof(bgProcess));
   newProcess->number = bgNum++;
   newProcess->pid = pid;
   // snprintf(newProcess->command, NL, "%s", command);
 
-  newProcess->command[0] = '\0'; // Initialize the command string
+  newProcess->command[0] = '\0';
   for (int i = 0; command[i] != NULL; i++) {
     strncat(newProcess->command, command[i], NL - strlen(newProcess->command) - 1);
     if (command[i + 1] != NULL) {
@@ -93,32 +95,6 @@ void handleBgProcess() {
     removeBgProcess(pid);
   }
 }
-
-// void printMessages() {
-//   bgProcess *prev = NULL, *curr = bg, *tmp;
-
-//   while (curr != NULL) {
-//     int status;
-//     pid_t result = waitpid(curr->pid, &status, WNOHANG);
-//     if (result == 0) {
-//       prev = curr;
-//       curr = curr->next;
-//     } else if (result == curr->pid) {
-//       printf("[%d]+ Done  %s\n", curr->number, curr->command);
-//       if (prev == NULL) {
-//         bg = curr->next;
-//       } else {
-//         prev->next = curr->next;
-//       }
-//       tmp = curr;
-//       curr = curr->next;
-//       free(tmp);
-//     } else {
-//       perror("waitpid");
-//       break;
-//     }
-//   }
-// }
 
 int main(int argk, char *argv[], char *envp[])
 /* argk - number of arguments */
@@ -185,19 +161,6 @@ int main(int argk, char *argv[], char *envp[])
       default: /* code executed only by parent process */
       
         if (isBg) {
-          
-        //   char command[NL] = "";
-        //   for (int j = 0; j < i - 1; j++) {
-        //     strcat(command, v[j]);
-        //     if (j < i - 2) {
-        //       strcat(command, " ");
-        //     }
-        //   }
-        //   addBgProcess(frkRtnVal, command);
-        // } else {
-        //   if (waitpid(frkRtnVal, NULL, 0) == -1) {
-        //     perror("waitpid");
-        //   }
           addBgProcess(frkRtnVal, v);
         } else {
           if (waitpid(frkRtnVal, NULL, 0) == -1) {

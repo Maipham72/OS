@@ -3,11 +3,13 @@
 #include <signal.h>
 #include <unistd.h>
 
+//SIG HUP handle
 void handleSighup(int sig) {
     printf("Ouch!\n");
     fflush(stdout);
 }
 
+//SIG INT handle
 void handleSigint(int sig) {
     printf("Yeah!\n");
     fflush(stdout);
