@@ -227,6 +227,7 @@ int main(int argc, char *argv[]) {
             data->searchTerm[sizeof(data->searchTerm) - 1] = '\0';
 
             pthread_create(&threads[clientCount++], NULL, clientConnection, data);
+            pthread_detach(threads[clientCount]);
 
             if (clientCount >= MAX_CLIENTS) {
                 pthread_join(threads[clientCount], NULL);
