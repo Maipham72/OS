@@ -227,14 +227,15 @@ int main(int argc, char *argv[]) {
             data->searchTerm[sizeof(data->searchTerm) - 1] = '\0';
 
             pthread_create(&threads[clientCount++], NULL, clientConnection, data);
-            pthread_detach(threads[clientCount]);
+            // pthread_detach(threads[clientCount]);
 
             if (clientCount >= MAX_CLIENTS) {
                 pthread_join(threads[clientCount], NULL);
                 clientCount = 0;
-            } else {
-                clientCount++;
-            }
+            } 
+            // else {
+            //     clientCount++;
+            // }
         } else {
             if (errno != EAGAIN && errno != EWOULDBLOCK) {
                 perror("Failed to accept connection");
