@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
@@ -14,6 +15,7 @@ typedef struct Node {
     struct Node *next;
     struct Node *bookNext;
     struct Node *nextFrequentSearch;
+    int searchCount;
 } Node;
 
 typedef struct {
@@ -25,6 +27,8 @@ typedef struct {
 
 Node *shareListHead = NULL;
 pthread_mutex_t listMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t outputCond = PTHREAD_COND_INITIALIZER;
+int readyToOutput = 0;
 int bookCount = 0;
 int searchCount = 0;
 
@@ -72,7 +76,7 @@ void *clientConnection (void *arg) {
     snprintf(filename, sizeof(filename), "book_%02d.txt", data->id);
 
     bookFile = fopen(filename, "w");
-    if (!bookFile) {
+    if (bookFile == NULL) {
         perror("Failed to open file");
         close(data->socketFd);
         free(data);
@@ -120,6 +124,41 @@ void *clientConnection (void *arg) {
     pthread_exit(NULL);
 }
 
+// analyse thread function
+void *analysisThread(void *arg) {
+    char *searchPattern = (char *)arg;
+
+    while (1) {
+        printf("Analysis thread is running...\n"); 
+
+        sleep(5);
+
+        pthread_mutex_lock(&listMutex);
+        int localSearchCount = 0;
+        Node *temp = shareListHead;
+
+        while (temp != NULL) {
+            printf("Checking line: %s\n", temp->line);
+
+            if (strstr(temp->line, searchPattern) != NULL) {
+                printf("Pattern found in line: %s\n", temp->line);
+                localSearchCount++;
+            }
+            temp = temp->next;
+        }
+
+        // only allow one thread to output the results
+        if (readyToOutput == 0) {
+            readyToOutput = 1;
+            printf("Pattern '%s' found %d times in received data.\n",searchPattern, localSearchCount);
+            pthread_cond_signal(&outputCond);
+            readyToOutput = 0;
+        }
+        pthread_mutex_unlock(&listMutex);
+    }
+    pthread_exit(NULL);
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 4) {
         fprintf(stderr, "Usage: %s -l <port> -p <searchTerm>\n", argv[0]);
@@ -137,6 +176,8 @@ int main(int argc, char *argv[]) {
     socklen_t clientLen = sizeof(clientAddr);
     pthread_t threads[MAX_CLIENTS];
     int clientCount = 0;
+    pthread_t analysis1;
+    pthread_t analysis2;
 
     // create a socket
     serverFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -167,19 +208,35 @@ int main(int argc, char *argv[]) {
 
     printf("Server listening on port %d\n", port);
 
+    // analysis threads
+    pthread_create(&analysis1, NULL, analysisThread, (void *)searchTerm);
+    pthread_create(&analysis2, NULL, analysisThread, (void *)searchTerm);
+
     while(1) {
         clientFd = accept(serverFd, (struct sockaddr *)&clientAddr, &clientLen);
         if (clientFd > 0) {
+
             printf("Accepted connection\n");
 
             ThreadData *data = (ThreadData *)malloc(sizeof(ThreadData));
+
             data->id = bookCount++;
             data->socketFd = clientFd;
             strncpy(data->searchTerm, searchTerm, sizeof(data->searchTerm) - 1);
 
+            data->searchTerm[sizeof(data->searchTerm) - 1] = '\0';
+
             pthread_create(&threads[clientCount++], NULL, clientConnection, data);
+
             if (clientCount >= MAX_CLIENTS) {
+                pthread_join(threads[clientCount], NULL);
                 clientCount = 0;
+            } else {
+                clientCount++;
+            }
+        } else {
+            if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                perror("Failed to accept connection");
             }
         }
         usleep(1000);
